@@ -6,6 +6,10 @@ bin_file_name = 'binary_data.bin';
 fileID = fopen(['binary_data.bin']);
 tx_data = fread(fileID);
 
+fileID_FD_REF = fopen(['ul_data_f_16QAM_52_64_10_1_1_AB_0.bin']);
+data_freq_dom_ref = fread(fileID_FD_REF, 'float');
+fclose(fileID_FD_REF);
+
 num_frames = 1;
 num_ul_slots = 1;
 ul_slots = 1;
@@ -28,10 +32,16 @@ ue_rx_gain_b = 81;
 ue_tx_gain_a = 65;
 ue_rx_gain_b = 81;
 
+
 % 48 data subcarrier indices
-lts_data_ind = [ 6,  7,  8,  9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,...
+lts_data_ind_cpp =...
+                [ 6,  7,  8,  9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,...
                 23, 24, 26, 27, 28, 29, 30, 31, 33, 34, 35, 36, 37, 38, 40, 41,...
                 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 56, 57, 58];
+
+lts_data_ind = [ 7,  8,  9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,...
+                24, 25, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 38, 39, 41, 42,...
+                43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 55, 56, 57, 58, 59];
 
 
 % Used to (among other thinsg), calculate tx_scale
@@ -90,6 +100,11 @@ end
 % |  02  05  09  13  |  
 % |  00  04  08  12  |
 
+% 4  6   7  5
+% 12 14 15 13
+% 8  10 11  9
+% 0  2   3  1
+
 % |  0011   0111   1011   1111   |  
 % |  0001   0110   1010   1110   | 
 % |  0010   0101   1001   1101   | 
@@ -122,6 +137,7 @@ for f = 1:num_frames
 
   	  for s = 1:sym_per_slot
 
+        % increment chunks of 52,
         chunk52 = chunk52 + 1;
   	  	curr_data = tx_data(52*chunk52+1:52*chunk52+52);
 
@@ -151,13 +167,15 @@ for f = 1:num_frames
         %----------------------------------------------------------
         
         % Fill data subcarrier indices
-        ofdm_sym = single(zeros(1, 48));
+        ofdm_sym = single(zeros(1, 64));
         for ii = 1:48
+          % ofdm_sym(lts_data_ind(ii)+1) = mod_data(ii);        	
           ofdm_sym(lts_data_ind(ii)) = mod_data(ii);
         end
 
         % Fill pilot subcarrier indices
         for ii = 1:4
+          %ofdm_sym(lts_pilot_ind(ii)+1) = lts_pilot_val(ii);        	
           ofdm_sym(lts_pilot_ind(ii)) = lts_pilot_val(ii);
         end
 
@@ -228,7 +246,7 @@ for f = 1:num_frames
       %}
 
       %% Write frequency domain data (matlab single 8-byte (4 real, 4 imag))
-      fwrite(fileID_FD_OUT, data_freq_dom, 'float');
+      fwrite(fileID_FD_OUT, data_freq_dom, 'float'); 
       fwrite(fileID_TD_OUT, data_time_dom_scaled_6dB_cint16, 'uint16');      
 
     end % sdr channels
@@ -239,9 +257,23 @@ fclose(fileID_BIN_OUT);
 fclose(fileID_FD_OUT);
 fclose(fileID_TD_OUT);
 
-fileID_BIN_OUT_COMP = fopen(['bin_out.bin']);
+%fileID_BIN_OUT_COMP = fopen(['bin_out.bin']);
+%tx_data_compare = fread(fileID_BIN_OUT_COMP, 'uint8');
+fileID_BIN_OUT_COMP = fopen(['ul_data_b_16QAM_52_64_10_1_1_AB_0.bin']);
+tx_data_compare = fread(fileID_BIN_OUT_COMP, 'uint8');
 
-tx_data_compare = fread(fileID_BIN_OUT_COMP);
+fileID_FD_OUT_ORIG = fopen(['fd_out.bin']);
+data_freq_dom_orig = fread(fileID_FD_OUT_ORIG, 'float');
+fileID_FD_OUT_COMP = fopen(['ul_data_f_16QAM_52_64_10_1_1_AB_0.bin']);
+data_freq_dom_compare = fread(fileID_FD_OUT_COMP, 'float');
+
+fileID_TD_OUT_COMP = fopen(['td_out.bin']);
+data_time_dom_compare = fread(fileID_TD_OUT_COMP, 'int16');
+
+fclose(fileID_BIN_OUT_COMP);
+fclose(fileID_FD_OUT_COMP);
+fclose(fileID_TD_OUT_COMP);
+fclose(fileID_FD_OUT_ORIG);
 
 %  static constexpr size_t lts_data_ind[48] = {
 %      6,  7,  8,  9,  10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
