@@ -24,6 +24,8 @@
 % SC_IND_DATA             = [2:7 9:21 23:27 39:43 45:57 59:64];     % Data subcarrier indices
 % SC_IND_DATA_PILOT       = [2:27 39:64]'; % Nothing in the center and 5 or 6 empty bins on the sides of the band
 %
+close all;
+
 
 %% Binary Data
 % 8320 bits were read
@@ -36,6 +38,7 @@ fclose( file_id );
 % Remove even nibbles
 stream1 = temp_data( 1 : 8 : end );
 stream2 = temp_data( 2 : 8 : end );
+stream3 = temp_data( 3 : 8 : end );
 stream4 = temp_data( 4 : 8 : end );
 stream5 = temp_data( 5 : 8 : end );
 stream6 = temp_data( 6 : 8 : end );
@@ -157,7 +160,7 @@ fd_data_error2 = sum( abs( binary_data - z ) ); % This checks out as expected
 % This is correct except for the scaling
 first_symbol_FD = fftshift( fd_data( 1 : symbol_length ) );
 %first_symbol_TD = ifft( first_symbol_FD ) * 2^15; % * sqrt( symbol_length );
-first_symbol_TD = cast(ifft( first_symbol_FD ) * 2^15, "int16"); % * sqrt( symbol_length );
+first_symbol_TD = ifft( first_symbol_FD ) * 2^15; % * sqrt( symbol_length );
 figure( 204 )
 subplot( 211 ), plot( real( first_symbol_TD ), 'o-' )
 grid on
@@ -178,6 +181,49 @@ cp_length = 16;
 num_symbols = 10;
 pad_length = 160;
 num_clients = 2;
+
+
+%%% Compare error in first symbol
+%for idx = 0:num_symbols
+%  curr_fd_sym = fftshift( fd_data( idx*(symbol_length) + (1:symbol_length) ) );
+%  curr_td_sym = ifft(curr_fd_sym) * 2^15;
+%  % 'read-in' symbol
+%  curr_td_sym_check = td_data(160 + idx*(16 + symbol_length) + ((16+1):(symbol_length+16)) );
+%  figure()
+%  subplot(311)
+%  plot(real(curr_td_sym), "o-"); grid on;
+%  subplot(312)
+%  plot(real(curr_td_sym_check), "o-"); grid on;
+%  subplot(313)
+%  plot(real(curr_td_sym)./real(curr_td_sym_check), "o-"); grid on;
+%end
+
+%% Compare error in first symbol
+
+for idx = 0:num_symbols-1
+  curr_fd_sym = fftshift( fd_data( idx*(symbol_length) + (1:symbol_length) ) );
+  curr_td_sym = ifft(curr_fd_sym) * 2^15;
+  % 'read-in' symbol
+  curr_td_sym_check = td_data(pad_length + idx*(cp_length + symbol_length) + ((cp_length+1):(symbol_length+cp_length)) );
+  figure()
+  subplot(311)
+  plot(real(curr_td_sym), "o-"); grid on;
+  subplot(312)
+  plot(real(curr_td_sym_check), "o-"); grid on;
+  subplot(313)
+  plot(real(curr_td_sym)./real(curr_td_sym_check), "o-"); grid on;
+end
+
+
+
+%% compare error in first 4 symbols
+
+%% apply the scaling found in sounder
+
+%% attempt to elimate qauntization noise as a factor
+
+
+
 
 % Duplicate TD data from FD data
 %  NOTE: 160 samples of pad flank the 10 OFDM symbols for each client
