@@ -36,7 +36,6 @@ fclose( file_id );
 % Remove even nibbles
 stream1 = temp_data( 1 : 8 : end );
 stream2 = temp_data( 2 : 8 : end );
-stream3 = temp_data( 3 : 8 : end );
 stream4 = temp_data( 4 : 8 : end );
 stream5 = temp_data( 5 : 8 : end );
 stream6 = temp_data( 6 : 8 : end );
@@ -54,10 +53,12 @@ zero_data = upsample( stream5, 4 ) + ...
     circshift( upsample( stream8, 4 ), 3 );
 
 % The first 48 symbols are valid and the last 4 are invalid
+% Grab
 binary_data = nan( 4 * 48 * 10 * 2, 1 );
 payload_length = 4 * 48;
 frame_length = 4 * 52;
 for idx = 1 : 20
+    % Fill payload data 4bit order data into binary_data array
     binary_data( ( idx - 1 ) * payload_length + ( 1 : payload_length ) ) = ...
         intermediate_data( ( idx - 1 ) * frame_length + ( 1 : payload_length ) );
 end
@@ -79,6 +80,8 @@ M = 16; % modulation order
 map_vect = [ 4; 12; 8; 0; 6; 14; 10; 2; 7; 15; 11; 3; 5; 13; 9; 1 ]; % This is a different version of gray coding than MATLAB's default
 x = qammod( binary_data, M, map_vect, 'InputType', 'bit', 'UnitAveragePower',true ); % transmit data
 % % z = qamdemod( x, M, 'gray', 'OutputType', 'bit', 'UnitAveragePower',true); % binary data
+% 
+% Why is x not scaled?  should be []
 figure( 102 ), clf
 plot( real( x ), imag( x ), 'o' )
 axis equal
@@ -111,7 +114,11 @@ data_symbols = [ 7 : 11, 13 : 25, 27 : 32, 34 : 39, 41 : 53, 55 : 59 ];
 pilot_symbols = [ 12, 26, 40, 54 ];
 pilots = [ 1, 1, -1, 1 ];
 fd_data_check = zeros( 1280, 1 );
+
+%for each frame, index fd_data_check with offset + slice arr of indices
 for idx = 1 : 20 % for each frame
+
+    %use slice plus offset to index data slots in fd_data_check
     fd_data_check( ( idx - 1 ) * 64 + data_symbols ) = x( ( idx - 1 ) * 48 + ( 1 : 48 ) );
     fd_data_check( ( idx - 1 ) * 64 + pilot_symbols ) = pilots;
 end
@@ -149,7 +156,8 @@ fd_data_error2 = sum( abs( binary_data - z ) ); % This checks out as expected
 % Convert the first symbol to the TD
 % This is correct except for the scaling
 first_symbol_FD = fftshift( fd_data( 1 : symbol_length ) );
-first_symbol_TD = ifft( first_symbol_FD ) * 2^15; % * sqrt( symbol_length );
+%first_symbol_TD = ifft( first_symbol_FD ) * 2^15; % * sqrt( symbol_length );
+first_symbol_TD = cast(ifft( first_symbol_FD ) * 2^15, "int16"); % * sqrt( symbol_length );
 figure( 204 )
 subplot( 211 ), plot( real( first_symbol_TD ), 'o-' )
 grid on
